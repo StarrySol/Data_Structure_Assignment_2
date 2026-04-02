@@ -11,3 +11,6 @@ struct Shape
 
     Shape();
 };
+
+double TriangleArea(const Vec2& a, const Vec2& b, const Vec2& c);
+
