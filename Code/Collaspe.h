@@ -63,25 +63,40 @@ Vec2 ComputeNewPoint(Node* prev, Node* curr, Node* next);
 \brief
 Collapses a node by removing it and reconnecting neighbors
 
+\param ring
+Ring containing node
+
 \param node
 Node to remove
 */
 /************************************************************************/
-void Collapse(Node* node);
+void Collapse(Ring& ring, Node* node);
 
 /************************************************************************/
 /*!
 \brief
-Simplifies a ring using APSC algorithm
+Checks if collapse causes intersection
 
-\param ring
-Ring to simplify
+\param node
+node to collapse
 
-\param totalVertices
-Total vertex count across all rings
+\return
+true if safe
+*/
+/************************************************************************/
+bool IsCollapseValid(Node* node);
+
+
+/************************************************************************/
+/*!
+\brief
+Global APSC simplification across all rings
+
+\param rings
+All rings
 
 \param target
 Target vertex count
 */
 /************************************************************************/
-void SimplifyRing(Ring& ring, int& totalVertices, int target);
+void SimplifyAll(std::vector<Ring>& rings, int target);

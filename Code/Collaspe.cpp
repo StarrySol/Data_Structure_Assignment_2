@@ -1,5 +1,7 @@
 #include "Collaspe.h"
 
+#include <queue>
+
 //Compute collapse cost (area error)
 double ComputeCost(Node* node)
 {
@@ -22,7 +24,7 @@ Vec2 ComputeNewPoint(Node* prev, Node* curr, Node* next)
     return mid;
 }
 
-void Collapse(Node* node)
+void Collapse(Ring& ring, Node* node)
 {
     Node* prev = node->prev;
     Node* next = node->next;
@@ -33,6 +35,12 @@ void Collapse(Node* node)
     //Assign new position to next node
     next->v.pos = newPos;
 
+    //If removing head, move it forward
+    if (node == ring.head)
+    {
+        ring.head = next;
+    }
+
     //Reconnect list
     prev->next = next;
     next->prev = prev;
@@ -41,48 +49,92 @@ void Collapse(Node* node)
     node->valid = false;
 }
 
-void SimplifyRing(Ring& ring, int& totalVertices, int target)
+bool IsCollapseValid(Node* node)
 {
-    MinHeap pq;//priority queue
+    //TODO: Do this laterrr
+    (void)(node);
+    return true;
+}
 
-    //Initialize PQ
-    Node* curr = ring.head;
 
-    for (int i = 0; i < ring.size; ++i)
+void SimplifyAll(std::vector<Ring>& rings, int target)
+{
+    struct Candidate
     {
-        curr->cost = ComputeCost(curr);
-        pq.push({curr, curr->cost});
-        curr = curr->next;
+        Node* node;
+        double cost;
+
+        bool operator>(const Candidate& other) const
+        {
+            return cost > other.cost;
+        }
+    };
+
+    std::priority_queue<Candidate, std::vector<Candidate>, std::greater<>> pq;
+
+    int totalVertices = 0;
+
+    //Initialize
+    for (Ring& ring : rings)
+    {
+        if (!ring.head)
+            continue;
+
+        totalVertices += ring.size;
+
+        Node* curr = ring.head;
+
+        for (int i = 0; i < ring.size; ++i)
+        {
+            curr->cost = ComputeCost(curr);
+            pq.push({curr, curr->cost});
+            curr = curr->next;
+        }
     }
 
-    //Iterative simplification
+    //Main loop
     while (totalVertices > target && !pq.empty())
     {
-        CollapseCandidate top = pq.top();
+        auto top = pq.top();
         pq.pop();
 
         Node* node = top.node;
 
-        //Skip invalid nodes
         if (!node->valid)
+            continue;
+
+        Ring* ring = nullptr;
+
+        //Find owning ring
+        for (Ring& r : rings)
+        {
+            Node* curr = r.head;
+            for (int i = 0; i < r.size; ++i)
+            {
+                if (curr == node)
+                {
+                    ring = &r;
+                    break;
+                }
+                curr = curr->next;
+            }
+            if (ring) break;
+        }
+
+        if (!ring || ring->size <= 3)
+            continue;
+
+        if (!IsCollapseValid(node))
             continue;
 
         Node* prev = node->prev;
         Node* next = node->next;
 
-        //Prevent collapsing below triangle
-        if (ring.size <= 3)
-            break;
+        Collapse(*ring, node);
 
-        //TODO:topology check(required for full correctness)
-
-        //Collapse node
-        Collapse(node);
-
-        ring.size--;
+        ring->size--;
         totalVertices--;
 
-        //Update neighbors
         prev->cost = ComputeCost(prev);
         next->cost = ComputeCost(next);
 

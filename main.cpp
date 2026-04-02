@@ -31,11 +31,7 @@ int main(int argc, char* argv[])
     std::vector<Ring> ringVec = LoadFile(file);
     file.close();
 
-    for (Ring& ring : ringVec)
-    {
-        SimplifyRing(ring, ring.size, targetVertices);
-    }
-
+        SimplifyAll(ringVec, targetVertices);
 
     OutputRings(ringVec);
 

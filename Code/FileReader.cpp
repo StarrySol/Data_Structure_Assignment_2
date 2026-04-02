@@ -1,5 +1,7 @@
 #include "FileReader.h"
+#include "Collaspe.h"
 
+#include <iomanip>
 #include <sstream>
 #include <string>
 #include <iostream>
@@ -66,8 +68,6 @@ std::vector<Ring> LoadFile(std::ifstream& inputFile)
     return ringVec;
 }
 
-#include <vector>
-
 //Convert vector of rings into circular doubly linked lists
 void ConvertToLinkedList(std::vector<Ring>& ringVec)
 {
@@ -111,6 +111,7 @@ void ConvertToLinkedList(std::vector<Ring>& ringVec)
 
         //Set size
         ring.size = (int)ring.vertices.size();
+        ring.originalArea = ComputeRingArea(ring);
 
         //Clear original storage
         ring.vertices.clear();
@@ -127,19 +128,30 @@ void OutputRings(std::vector<Ring>& ringVec)
             continue;
 
         const Node* curr = ring.head;
+        int vid = 0;
 
         do
         {
-            std::cout << curr->v.ring_id << "," << curr->v.vertex_id << ","  << curr->v.pos.x << "," << curr->v.pos.y << std::endl;
+            //May not be sequential anymore just ++ incstead
+            std::cout << curr->v.ring_id << "," << ++vid  << ","  << curr->v.pos.x << "," << curr->v.pos.y << std::endl;
             curr = curr->next;
         } while (curr != ring.head);
     }
-    //Blank for now ill do it later :)
-    std::cout << "Total signed area in input: "  <<  << std::endl;
-    std::cout << "Total signed area in output: " <<  << std::endl;
-    std::cout << "Total areal displacement: "    <<  << std::endl;
-    std::cout << std::endl; //Additional newline
+
+    double inputArea = 0.0;
+    for (const Ring& ring : ringVec)
+        inputArea += ring.originalArea;
+
+    double outputArea = ComputeTotalArea(ringVec);
+    double displacement = ComputeDisplacement(ringVec);
+
+    std::cout << std::scientific;
+
+    std::cout << "Total signed area in input: "  << inputArea << "\n";
+    std::cout << "Total signed area in output: " << outputArea << "\n";
+    std::cout << "Total areal displacement: "    << displacement << "\n";
 }
+
 
 void FreeRings(std::vector<Ring>& ringVec)
 {
