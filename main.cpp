@@ -30,6 +30,7 @@ int main(int argc, char* argv[])
     std::vector<Shape> shapesVec = LoadFile(file);
     file.close();
 
+
     OutputVertices(shapesVec);
 
     return 0;

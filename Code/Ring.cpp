@@ -1,11 +1,11 @@
-#include "Shape.h"
+#include "Ring.h"
 
 #include <vector>
 #include <cmath>
 #include <limits>
 #include <iterator>
 
-Shape::Shape()
+Ring::Ring()
 {
     
 }
