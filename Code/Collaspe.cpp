@@ -10,8 +10,27 @@ double ComputeCost(Node* node)
     Node* prev = node->prev;
     Node* next = node->next;
 
-    //Compute triangle area magnitude
-    return std::abs(SignedArea(prev->v.pos, node->v.pos, next->v.pos));
+    const Vec2& A = prev->v.pos;
+    const Vec2& B = node->v.pos;
+    const Vec2& C = next->v.pos;
+
+    //Triangle area (importance of removing this vertex)
+    double area = std::abs(SignedArea(A, B, C));
+
+    //Edge lengths
+    double len1 = std::hypot(B.x - A.x, B.y - A.y);
+    double len2 = std::hypot(C.x - B.x, C.y - B.y);
+
+    //Prevent division by zero
+    if (len1 < 1e-9 || len2 < 1e-9)
+        return std::numeric_limits<double>::max();
+
+    //Angle penalty (preserve sharp corners)
+    double dot = (B.x - A.x)*(C.x - B.x) + (B.y - A.y)*(C.y - B.y);
+    double anglePenalty = std::abs(dot) / (len1 * len2);
+
+    //Final weighted cost
+    return area * (1.0 + anglePenalty);
 }
 
 void Collapse(Ring& ring, Node* node)
@@ -46,7 +65,6 @@ bool IsCollapseValid(const std::vector<Ring>& rings, Node* node)
 
     Vec2 newPos = ComputeNewPoint(prev, node, next);
 
-    //New edges
     Vec2 e1a = prev->v.pos;
     Vec2 e1b = newPos;
 
@@ -74,12 +92,9 @@ bool IsCollapseValid(const std::vector<Ring>& rings, Node* node)
                 continue;
             }
 
-            //Check both new edges
             if (SegmentsIntersect(e1a, e1b, a->v.pos, b->v.pos) ||
                 SegmentsIntersect(e2a, e2b, a->v.pos, b->v.pos))
-            {
                 return false;
-            }
 
             curr = curr->next;
 
@@ -88,27 +103,20 @@ bool IsCollapseValid(const std::vector<Ring>& rings, Node* node)
 
     return true;
 }
-
 void SimplifyAll(std::vector<Ring>& rings, int target)
 {
-    //Priority queue candidate
-    struct Candidate
-    {
-        Node* node;
-        double cost;
+    using MinHeap = std::priority_queue<
+        CollapseCandidate,
+        std::vector<CollapseCandidate>,
+        std::greater<CollapseCandidate>
+    >;
 
-        bool operator>(const Candidate& other) const
-        {
-            return cost > other.cost;
-        }
-    };
-
-    //Min heap
-    std::priority_queue<Candidate, std::vector<Candidate>, std::greater<>> pq;
+    MinHeap pq;
 
     int totalVertices = 0;
+    int globalID = 0;
 
-    //Initialize PQ and count vertices
+    //Initialize PQ
     for (Ring& ring : rings)
     {
         if (!ring.head)
@@ -118,19 +126,26 @@ void SimplifyAll(std::vector<Ring>& rings, int target)
 
         Node* curr = ring.head;
 
-        //Use safe circular traversal instead of size-based loop
         do
         {
             curr->cost = ComputeCost(curr);
-            pq.push({curr, curr->cost});
+
+            pq.push({
+                curr,
+                curr->cost,
+                globalID++,
+                curr->version
+            });
+
             curr = curr->next;
+
         } while (curr != ring.head);
     }
 
+    //Main loop
     while (totalVertices > target && !pq.empty())
     {
-        //Get best candidate
-        Candidate top = pq.top();
+        CollapseCandidate top = pq.top();
         pq.pop();
 
         Node* node = top.node;
@@ -139,7 +154,11 @@ void SimplifyAll(std::vector<Ring>& rings, int target)
         if (!node || !node->valid)
             continue;
 
-        //Find owning ring (safe traversal)
+        //Skip outdated PQ entries
+        if (top.version != node->version)
+            continue;
+
+        //Find owning ring
         Ring* ownerRing = nullptr;
 
         for (Ring& r : rings)
@@ -157,13 +176,13 @@ void SimplifyAll(std::vector<Ring>& rings, int target)
                     break;
                 }
                 curr = curr->next;
+
             } while (curr != r.head);
 
             if (ownerRing)
                 break;
         }
 
-        //Skip if not found or too small
         if (!ownerRing || ownerRing->size <= 3)
             continue;
 
@@ -171,32 +190,26 @@ void SimplifyAll(std::vector<Ring>& rings, int target)
         Node* next = node->next;
 
         if (!TryCollapse(rings, *ownerRing, node))
-        {
-            node->valid = false;//prevent reprocessing bad nodes
             continue;
-        }
-
-        //Do not decrement ring->size here
-        //Already handled inside TryCollapse oops 
 
         totalVertices--;
 
-        //Recompute costs locally
+        //Update neighbors
         if (prev && prev->valid)
         {
+            prev->version++; //invalidate old PQ entries
             prev->cost = ComputeCost(prev);
-            pq.push({prev, prev->cost});
+            pq.push(CollapseCandidate(prev, prev->cost, globalID++, prev->version));
         }
-
+        
         if (next && next->valid)
         {
+            next->version++; //invalidate old PQ entries
             next->cost = ComputeCost(next);
-            pq.push({next, next->cost});
+            pq.push(CollapseCandidate(next, next->cost, globalID++, next->version));
         }
     }
 }
-
-
 Vec2 ComputeNewPoint(Node* prev, Node* curr, Node* next)
 {
     const Vec2& A = prev->v.pos;
@@ -237,17 +250,26 @@ bool TryCollapse(std::vector<Ring>& rings, Ring& ring, Node* node)
     Node* prev = node->prev;
     Node* next = node->next;
 
-    //Check topology BEFORE modifying anything
+    //Check topology
     if (!IsCollapseValid(rings, node))
         return false;
 
-    //Compute new vertex
+    //Compute new position
     Vec2 newPos = ComputeNewPoint(prev, node, next);
 
-    //Apply position to NEXT node (APSC standard)
+    //Reject unstable movement
+    double moveDist = std::hypot(
+        newPos.x - node->v.pos.x,
+        newPos.y - node->v.pos.y
+    );
+
+    if (moveDist > 500.0) //tunable threshold
+        return false;
+
+    //Apply new position
     next->v.pos = newPos;
 
-    //Update head if needed
+    //Update head
     if (node == ring.head)
         ring.head = next;
 
