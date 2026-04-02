@@ -26,9 +26,6 @@ Converts the vector of rings into a doubly circular linked list
 
 \param ringVec
 vector of rings
-
-\return
-std::vector of all rings within the file
 */
 /************************************************************************/
 void ConvertToLinkedList(std::vector<Ring>& ringVec);
@@ -42,7 +39,7 @@ Handles output of a vector of rings
 std::vector of all rings and vertices to print
 */
 /************************************************************************/
-void OutputVertices(std::vector<Ring>& ringVec);
+void OutputRings(std::vector<Ring>& ringVec);
 
 /************************************************************************/
 /*!

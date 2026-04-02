@@ -36,3 +36,4 @@ double SignedArea(const Vec2& a, const Vec2& b, const Vec2& c)
         (b.y - a.y)*(c.x - a.x)
     );
 }
+

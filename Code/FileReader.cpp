@@ -112,11 +112,12 @@ void ConvertToLinkedList(std::vector<Ring>& ringVec)
         //Set size
         ring.size = (int)ring.vertices.size();
 
+        //Clear original storage
         ring.vertices.clear();
     }
 }
 
-void OutputVertices(std::vector<Ring>& ringVec)
+void OutputRings(std::vector<Ring>& ringVec)
 {
     std::cout << "ring_id,vertex_id,x,y" << std::endl;
 
@@ -133,7 +134,10 @@ void OutputVertices(std::vector<Ring>& ringVec)
             curr = curr->next;
         } while (curr != ring.head);
     }
-
+    //Blank for now ill do it later :)
+    std::cout << "Total signed area in input: "  <<  << std::endl;
+    std::cout << "Total signed area in output: " <<  << std::endl;
+    std::cout << "Total areal displacement: "    <<  << std::endl;
     std::cout << std::endl; //Additional newline
 }
 

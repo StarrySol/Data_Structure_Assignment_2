@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "Code/FileReader.h"
+#include "Code/Collaspe.h"
 
 int main(int argc, char* argv[])
 {
@@ -30,10 +31,13 @@ int main(int argc, char* argv[])
     std::vector<Ring> ringVec = LoadFile(file);
     file.close();
 
+    for (Ring& ring : ringVec)
+    {
+        SimplifyRing(ring, ring.size, targetVertices);
+    }
 
-    
 
-    OutputVertices(ringVec);
+    OutputRings(ringVec);
 
     FreeRings(ringVec);
 

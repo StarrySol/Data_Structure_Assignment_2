@@ -19,9 +19,9 @@ struct Node
     Node* prev = nullptr;
     Node* next = nullptr;
 
-    double cost = 0.0;//APSC error metric
+    double cost = 0.0;//APSC cost
 
-    bool valid = true;//lazy deletion for PQ
+    bool valid = true;//deletion for PQ
 };
 
 struct Ring
@@ -39,5 +39,23 @@ struct Ring
     void FreeRing();
 };
 
+/************************************************************************/
+/*!
+\brief
+Computes signed area of triangle formed by 3 points
+
+\param a
+First point
+
+\param b
+Second point
+
+\param c
+Third point
+
+\return
+Signed area of triangle
+*/
+/************************************************************************/
 double SignedArea(const Vec2& a, const Vec2& b, const Vec2& c);
 
