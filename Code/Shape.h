@@ -1,10 +1,13 @@
+#pragma once
+
+
 #include "Vertice.h"
-#include <list>
+#include <vector>
 
 struct Shape
 {
     int shapeID = 0;
-    std::list<Vertice> vertices{};
+    std::vector<Vertice> vertices{};
 
     Shape();
 };

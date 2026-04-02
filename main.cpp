@@ -1,7 +1,8 @@
 #include <iostream>
 #include <fstream>
+#include <vector>
 
-#include "Code/Shape.h"
+#include "Code/FileReader.h"
 
 int main(int argc, char* argv[])
 {
@@ -26,11 +27,10 @@ int main(int argc, char* argv[])
     }
 
     //Parse data
+    std::vector<Shape> shapesVec = LoadFile(file);
+    file.close();
 
-
-
-
-    std::cout << "ring_id,vertex_id,x,y" << std::endl;
+    OutputVertices(shapesVec);
 
     return 0;
 }
