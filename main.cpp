@@ -31,6 +31,8 @@ int main(int argc, char* argv[])
     file.close();
 
 
+    
+
     OutputVertices(ringVec);
 
     FreeRings(ringVec);

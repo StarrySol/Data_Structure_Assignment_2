@@ -61,6 +61,8 @@ std::vector<Ring> LoadFile(std::ifstream& inputFile)
         ringVec[ring_id].vertices.push_back(v);
     }
 
+    ConvertToLinkedList(ringVec);
+
     return ringVec;
 }
 
@@ -127,7 +129,7 @@ void OutputVertices(std::vector<Ring>& ringVec)
 
         do
         {
-            std::cout << curr->v.pos.x << "," << curr->v.pos.y << "\n";
+            std::cout << curr->v.ring_id << "," << curr->v.vertex_id << ","  << curr->v.pos.x << "," << curr->v.pos.y << std::endl;
             curr = curr->next;
         } while (curr != ring.head);
     }
