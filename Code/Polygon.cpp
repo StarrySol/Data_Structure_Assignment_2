@@ -1,7 +1,7 @@
 #include "Math.h"
 
-struct Vertice
+struct Vertex
 {
     int vertex_id = 0;
-    Vec2 pos{};
+    Vector2 pos{};
 };
