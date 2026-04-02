@@ -75,16 +75,20 @@ void Collapse(Ring& ring, Node* node);
 /************************************************************************/
 /*!
 \brief
-Checks if collapse causes intersection
+Checks if collapsing node introduces intersection
+
+\param rings
+All rings
 
 \param node
-node to collapse
+Node to collapse
 
 \return
-true if safe
+True if safe
+False if not safe
 */
 /************************************************************************/
-bool IsCollapseValid(Node* node);
+bool IsCollapseValid(const std::vector<Ring>& rings, Node* node);
 
 
 /************************************************************************/
@@ -100,3 +104,44 @@ Target vertex count
 */
 /************************************************************************/
 void SimplifyAll(std::vector<Ring>& rings, int target);
+
+/************************************************************************/
+/*!
+\brief
+Computes area-preserving new point for collapse
+
+\param prev
+Previous node
+
+\param curr
+Current node
+
+\param next
+Next node
+
+\return
+New point preserving triangle area
+*/
+/************************************************************************/
+Vec2 ComputeNewPoint(Node* prev, Node* curr, Node* next);
+
+/************************************************************************/
+/*!
+\brief
+Performs safe APSC collapse with topology and area preservation
+
+\param rings
+All rings
+
+\param ring
+Ring of node
+
+\param node
+Node to collapse
+
+\return
+True if collapse performed
+False if collapse not performed
+*/
+/************************************************************************/
+bool TryCollapse(std::vector<Ring>& rings, Ring& ring, Node* node);

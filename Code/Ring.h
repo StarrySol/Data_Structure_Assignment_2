@@ -103,3 +103,65 @@ Total area
 */
 /************************************************************************/
 double ComputeTotalArea(const std::vector<Ring>& rings);
+
+
+//Helper funcs
+
+/************************************************************************/
+/*!
+\brief
+Computes orientation of ordered triplet (a,b,c)
+
+\param a
+First point
+
+\param b
+Second point
+
+\param c
+Third point
+
+\return
+0=collinear
+1=clockwise
+2=counterclockwise
+*/
+/************************************************************************/
+int Orientation(const Vec2& a, const Vec2& b, const Vec2& c);
+
+/************************************************************************/
+/*!
+\brief
+Checks if point c lies on segment ab
+
+\param a
+Segment start
+
+\param b
+Segment end
+
+\param c
+Point
+
+\return
+True if on segment
+*/
+/************************************************************************/
+bool OnSegment(const Vec2& a, const Vec2& b, const Vec2& c);
+
+/************************************************************************/
+/*!
+\brief
+Checks if two line segments intersect
+
+\param p1,q1
+First segment
+
+\param p2,q2
+Second segment
+
+\return
+True if intersect
+*/
+/************************************************************************/
+bool SegmentsIntersect(const Vec2& p1, const Vec2& q1, const Vec2& p2, const Vec2& q2);
