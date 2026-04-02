@@ -17,7 +17,7 @@ int main(int argc, char* argv[])
 
     (void)targetVertices;
 
-    std::ifsstream file;
+    std::ifstream file;
     file.open(inputFile, std::ios::in);
     if (!file.is_open())
     {
@@ -26,7 +26,7 @@ int main(int argc, char* argv[])
     }
 
     //Parse data
-    
+
 
 
 
