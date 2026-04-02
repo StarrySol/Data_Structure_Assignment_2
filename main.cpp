@@ -33,5 +33,7 @@ int main(int argc, char* argv[])
 
     OutputVertices(ringVec);
 
+    FreeRings(ringVec);
+
     return 0;
 }

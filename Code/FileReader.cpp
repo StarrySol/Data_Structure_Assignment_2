@@ -20,8 +20,6 @@ std::vector<Ring> LoadFile(std::ifstream& inputFile)
     //Skip header line
     std::getline(inputFile, line);
 
-    int maxRingID = -1;
-
     //Get line until EOF
     while (std::getline(inputFile, line))
     {
@@ -47,18 +45,13 @@ std::vector<Ring> LoadFile(std::ifstream& inputFile)
 
         
         //Insert new ring if list dosnt have that ring number
-        while (ring_id > maxRingID)
+        if ((size_t)ring_id >= ringVec.size())
         {
-            maxRingID++;
-
-            Ring newRing;
-            newRing.ringID = maxRingID;
-
-            ringVec.push_back(newRing);
-
+            ringVec.resize(ring_id + 1);
+            ringVec[ring_id].ringID = ring_id;
         }
         
-        // Create vertex
+        //Create vertex
         Vertice v;
         v.ring_id = ring_id;
         v.vertex_id = vertex_id;
@@ -71,17 +64,81 @@ std::vector<Ring> LoadFile(std::ifstream& inputFile)
     return ringVec;
 }
 
+#include <vector>
+
+//Convert vector of rings into circular doubly linked lists
+void ConvertToLinkedList(std::vector<Ring>& ringVec)
+{
+    //Loop through each ring
+    for (Ring& ring : ringVec)
+    {
+        //Skip empty rings
+        if (ring.vertices.empty())
+            continue;
+
+        Node* first = nullptr;//first node in list
+        Node* prev = nullptr;//previous node while building
+
+        //Create nodes from vertices
+        for (const Vertice& v : ring.vertices)
+        {
+            //Allocate new node
+            Node* node = new Node();
+            node->v = v;
+
+            //Set first node
+            if (!first)
+                first = node;
+
+            //Link with previous node
+            if (prev)
+            {
+                prev->next = node;
+                node->prev = prev;
+            }
+
+            prev = node;
+        }
+
+        //Close the loop (circular list)
+        prev->next = first;
+        first->prev = prev;
+
+        //Assign ring head
+        ring.head = first;
+
+        //Set size
+        ring.size = (int)ring.vertices.size();
+
+        ring.vertices.clear();
+    }
+}
+
 void OutputVertices(std::vector<Ring>& ringVec)
 {
     std::cout << "ring_id,vertex_id,x,y" << std::endl;
 
     for (Ring& ring : ringVec)
     {
-        for (Vertice& vertice : ring.vertices)
+        if (!ring.head)
+            continue;
+
+        const Node* curr = ring.head;
+
+        do
         {
-            std::cout << vertice.ring_id << "," << vertice.vertex_id << "," << vertice.pos.x << "," << vertice.pos.y <<std::endl;
-        } 
+            std::cout << curr->v.pos.x << "," << curr->v.pos.y << "\n";
+            curr = curr->next;
+        } while (curr != ring.head);
     }
 
     std::cout << std::endl; //Additional newline
+}
+
+void FreeRings(std::vector<Ring>& ringVec)
+{
+    for (Ring& ring : ringVec)
+    {
+        ring.FreeRing();
+    }
 }

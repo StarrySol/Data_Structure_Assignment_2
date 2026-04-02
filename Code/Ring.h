@@ -3,6 +3,7 @@
 
 #include "Math.h"
 #include <vector>
+#include <queue>
 
 struct Vertice
 {
@@ -26,10 +27,17 @@ struct Node
 struct Ring
 {
     int ringID = 0;
-    std::vector<Vertice> vertices{};
+    Node* head = nullptr;//circular linked list
+    int size = 0;
+
+    //Only used when parsing input data
+    std::vector<Vertice> vertices;
 
     Ring();
+
+    //Frees all pointers
+    void FreeRing();
 };
 
-double TriangleArea(const Vec2& a, const Vec2& b, const Vec2& c);
+double SignedArea(const Vec2& a, const Vec2& b, const Vec2& c);
 
