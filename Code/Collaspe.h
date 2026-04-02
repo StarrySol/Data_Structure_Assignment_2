@@ -108,7 +108,7 @@ void SimplifyAll(std::vector<Ring>& rings, int target);
 /************************************************************************/
 /*!
 \brief
-Computes area-preserving new point for collapse
+Computes new vertex position using true APSC (area-preserving polyline collapse)
 
 \param prev
 Previous node

@@ -44,11 +44,15 @@ bool IsCollapseValid(const std::vector<Ring>& rings, Node* node)
     Node* prev = node->prev;
     Node* next = node->next;
 
-    //New edges after collapse
-    Vec2 a = prev->v.pos;
-    Vec2 b = next->v.pos;
+    Vec2 newPos = ComputeNewPoint(prev, node, next);
 
-    //Check against ALL edges in ALL rings
+    //New edges
+    Vec2 e1a = prev->v.pos;
+    Vec2 e1b = newPos;
+
+    Vec2 e2a = newPos;
+    Vec2 e2b = next->v.pos;
+
     for (const Ring& ring : rings)
     {
         if (!ring.head)
@@ -58,20 +62,24 @@ bool IsCollapseValid(const std::vector<Ring>& rings, Node* node)
 
         do
         {
-            const Node* e1 = curr;
-            const Node* e2 = curr->next;
+            const Node* a = curr;
+            const Node* b = curr->next;
 
-            //Skip edges connected to collapsing node
-            if (e1 == node || e2 == node ||
-                e1 == prev || e2 == prev ||
-                e1 == next || e2 == next)
+            //Skip adjacent edges
+            if (a == node || b == node ||
+                a == prev || b == prev ||
+                a == next || b == next)
             {
                 curr = curr->next;
                 continue;
             }
 
-            if (SegmentsIntersect(a, b, e1->v.pos, e2->v.pos))
+            //Check both new edges
+            if (SegmentsIntersect(e1a, e1b, a->v.pos, b->v.pos) ||
+                SegmentsIntersect(e2a, e2b, a->v.pos, b->v.pos))
+            {
                 return false;
+            }
 
             curr = curr->next;
 
@@ -162,9 +170,11 @@ void SimplifyAll(std::vector<Ring>& rings, int target)
         Node* prev = node->prev;
         Node* next = node->next;
 
-        //Attempt collapse (including topology + area preservation)
         if (!TryCollapse(rings, *ownerRing, node))
+        {
+            node->valid = false;//prevent reprocessing bad nodes
             continue;
+        }
 
         //Do not decrement ring->size here
         //Already handled inside TryCollapse oops 
@@ -189,76 +199,59 @@ void SimplifyAll(std::vector<Ring>& rings, int target)
 
 Vec2 ComputeNewPoint(Node* prev, Node* curr, Node* next)
 {
-    Vec2 A = prev->v.pos;
-    Vec2 B = curr->v.pos;
-    Vec2 C = next->v.pos;
+    const Vec2& A = prev->v.pos;
+    const Vec2& B = curr->v.pos;
+    const Vec2& C = next->v.pos;
 
-    //Original signed area
-    double targetArea = SignedArea(A,B,C);
+    //Compute twice signed area of triangle ABC
+    double area2 = (B.x - A.x)*(C.y - A.y) - (B.y - A.y)*(C.x - A.x);
 
-    //Direction vector AC
-    Vec2 dir = C - A;
+    //Midpoint of AC
+    Vec2 mid((A.x + C.x)*0.5, (A.y + C.y)*0.5);
 
-    //Normal vector perpendicular to AC
-    Vec2 normal(-dir.y, dir.x);
+    //Direction AC
+    Vec2 d = C - A;
+    double len = std::sqrt(d.x*d.x + d.y*d.y);
 
-    //Normalize normal
-    double len = std::sqrt(normal.x*normal.x + normal.y*normal.y);
     if (len < 1e-9)
-        return B;//degenerate
+        return B;//degenerate case
 
-    normal.x /= len;
-    normal.y /= len;
+    //Perpendicular unit normal
+    Vec2 n(-d.y / len, d.x / len);
 
-    //We move midpoint along normal to match area
-    Vec2 mid = Vec2(
-        (A.x + C.x)*0.5,
-        (A.y + C.y)*0.5
-    );
-
-    //Area scaling factor
-    double base = std::sqrt((C.x - A.x)*(C.x - A.x) + (C.y - A.y)*(C.y - A.y));
-
-    if (base < 1e-9)
-        return mid;
-
-    double height = (2.0 * targetArea) / base;
+    //Height needed to preserve area
+    double h = area2 / len;
 
     //Final point
-    Vec2 result(
-        mid.x + normal.x * height,
-        mid.y + normal.y * height
-    );
-
-    return result;
+    return Vec2(mid.x + n.x * h, mid.y + n.y * h);
 }
 
 bool TryCollapse(std::vector<Ring>& rings, Ring& ring, Node* node)
 {
-    if (!node->valid)
+    if (!node || !node->valid)
         return false;
 
     if (ring.size <= 3)
         return false;
 
-    //Check topology
-    if (!IsCollapseValid(rings, node))
-        return false;
-
     Node* prev = node->prev;
     Node* next = node->next;
 
-    //Compute exact area-preserving point
-    Vec2 newPos = ComputeNewPoint(prev,node,next);
+    //Check topology BEFORE modifying anything
+    if (!IsCollapseValid(rings, node))
+        return false;
 
-    //Assign new position
+    //Compute new vertex
+    Vec2 newPos = ComputeNewPoint(prev, node, next);
+
+    //Apply position to NEXT node (APSC standard)
     next->v.pos = newPos;
 
     //Update head if needed
     if (node == ring.head)
         ring.head = next;
 
-    //Reconnect
+    //Reconnect list
     prev->next = next;
     next->prev = prev;
 

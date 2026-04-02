@@ -133,7 +133,7 @@ void OutputRings(std::vector<Ring>& ringVec)
         do
         {
             //May not be sequential anymore just ++ incstead
-            std::cout << curr->v.ring_id << "," << ++vid  << ","  << curr->v.pos.x << "," << curr->v.pos.y << std::endl;
+            std::cout << curr->v.ring_id << "," << vid++  << ","  << curr->v.pos.x << "," << curr->v.pos.y << std::endl;
             curr = curr->next;
         } while (curr != ring.head);
     }
