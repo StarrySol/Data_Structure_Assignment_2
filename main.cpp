@@ -27,11 +27,11 @@ int main(int argc, char* argv[])
     }
 
     //Parse data
-    std::vector<Shape> shapesVec = LoadFile(file);
+    std::vector<Ring> ringVec = LoadFile(file);
     file.close();
 
 
-    OutputVertices(shapesVec);
+    OutputVertices(ringVec);
 
     return 0;
 }

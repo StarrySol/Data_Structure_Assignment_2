@@ -4,15 +4,15 @@
 #include <string>
 #include <iostream>
 
-std::vector<Shape> LoadFile(std::ifstream& inputFile)
+std::vector<Ring> LoadFile(std::ifstream& inputFile)
 {
-    std::vector<Shape> shapeVec{};
+    std::vector<Ring> ringVec{};
 
     //Check if ifstream is open
     if (!inputFile.is_open())
     {
         std::cerr << "Unable to open file" <<std::endl;
-        return shapeVec;
+        return ringVec;
     }
 
     std::string line;
@@ -46,15 +46,15 @@ std::vector<Shape> LoadFile(std::ifstream& inputFile)
         y = std::stod(token);
 
         
-        //Insert new shape if list dosnt have that shape number
+        //Insert new ring if list dosnt have that ring number
         while (ring_id > maxRingID)
         {
             maxRingID++;
 
-            Shape newShape;
-            newShape.shapeID = maxRingID;
+            Ring newRing;
+            newRing.ringID = maxRingID;
 
-            shapeVec.push_back(newShape);
+            ringVec.push_back(newRing);
 
         }
         
@@ -65,19 +65,19 @@ std::vector<Shape> LoadFile(std::ifstream& inputFile)
         v.pos = Vec2(x, y);
 
         //Add new vertex into list
-        shapeVec[ring_id].vertices.push_back(v);
+        ringVec[ring_id].vertices.push_back(v);
     }
 
-    return shapeVec;
+    return ringVec;
 }
 
-void OutputVertices(std::vector<Shape>& shapeVec)
+void OutputVertices(std::vector<Ring>& ringVec)
 {
     std::cout << "ring_id,vertex_id,x,y" << std::endl;
 
-    for (Shape& shape : shapeVec)
+    for (Ring& ring : ringVec)
     {
-        for (Vertice& vertice : shape.vertices)
+        for (Vertice& vertice : ring.vertices)
         {
             std::cout << vertice.ring_id << "," << vertice.vertex_id << "," << vertice.pos.x << "," << vertice.pos.y <<std::endl;
         } 
