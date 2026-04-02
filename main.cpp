@@ -3,7 +3,7 @@
 #include <vector>
 
 #include "Code/FileReader.h"
-#include "Code/Collaspe.h"
+#include "Code/Collapse.h"
 
 int main(int argc, char* argv[])
 {

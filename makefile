@@ -3,16 +3,12 @@ CXXFLAGS = -std=c++17 -pedantic-errors -Wall -Wextra -Werror
 
 TARGET = simplify
 
-SRCS = main.cpp Code/Ring.cpp Code/FileReader.cpp Code/Collaspe.cpp
-OBJS = $(SRCS:.cpp=.o)
+SRCS = main.cpp Code/Ring.cpp Code/FileReader.cpp Code/Collapse.cpp
 
-all: clean $(TARGET)
+.PHONY: all clean
 
-$(TARGET): $(OBJS)
-	$(CXX) $(CXXFLAGS) -o $(TARGET) $(OBJS)
-
-%.o: %.cpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+all:
+	$(CXX) $(CXXFLAGS) $(SRCS) -o $(TARGET)
 
 clean:
-	rm -f $(OBJS) $(TARGET)
+	rm -f $(TARGET)

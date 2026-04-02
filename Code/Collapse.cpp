@@ -1,4 +1,4 @@
-#include "Collaspe.h"
+#include "Collapse.h"
 
 #include <iostream>
 

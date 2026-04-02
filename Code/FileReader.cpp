@@ -1,5 +1,5 @@
 #include "FileReader.h"
-#include "Collaspe.h"
+#include "Collapse.h"
 
 #include <iomanip>
 #include <sstream>
