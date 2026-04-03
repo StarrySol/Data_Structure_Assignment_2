@@ -1,10 +1,20 @@
-#pragma once
+/******************************************************************************
+ * File:        Ring.h
+ * Project:     Data Structures Assigment 2
+ *
+ * Description:
+ * This file contains the declaration of classes involving a ring and required structs
+ * A ring is a closed polyline of a polygon (or one of its holes)
+ * It also can helper functions to check area, segement, .etc.
+ ******************************************************************************/
 
+#pragma once
 
 #include "Math.h"
 #include <vector>
 #include <queue>
 
+//One vertex as read from the CSV input.  
 struct Vertice
 {
     int ring_id = 0;
@@ -12,68 +22,92 @@ struct Vertice
     Vec2 pos{};
 };
 
+//One node in the circular doubly-linked list that represents
+//a ring.  Think of it as a "live" vertex that the algorithm
+//can remove or reposition.
 struct Node
 {
-    Vertice v;
+    Vertice v; //the vertex data
 
-    Node* prev = nullptr;
-    Node* next = nullptr;
+    Node* prev = nullptr;    //previous node in the ring (circular)
+    Node* next = nullptr;    //next     node in the ring (circular)
 
-    double cost = 0.0;//APSC cost
-
-    bool valid = true;//deletion for PQ
-
-    int version = 0; //increment whenever node changes
+    double cost = 0.0;    //cached APSC collapse cost for this node as "B" in A->B->C->D
+    bool valid = true;    //false once this node has been collapsed and removed
+    int version = 0;      //incremented every time cost changes; used to skip stale PQ entries
 };
 
+//One closed boundary (exterior or interior) of the input polygon.  
+//After parsing, the vertex array is converted into a circular doubly linked list and then cleared.
+//Doubley linked list, head -> N0 <-> N1 <-> N2 <-> ... <-> Nk <-> (back to N0)
 struct Ring
 {
-    int ringID = 0;
-    Node* head = nullptr;//circular linked list
-    int size = 0;
+    int ringID = 0;         //Ring it belongs to
+    Node* head = nullptr;   //First node in circular linked list
+    int size = 0;           //Number of nodes in list
 
-    double originalArea = 0.0; //Orginal area of ring
+    double originalArea = 0.0;       //Signed area before any simplification
 
-    //Only used when parsing input data
+    //Temporary storage used only during CSV parsing
+    //Cleared once ConvertToLinkedList() runs.
     std::vector<Vertice> vertices;
 
     Ring();
 
-    //Frees all pointers
+    //Deletes all nodes in linked list
     void FreeRing();
 };
+
+//Geometry helpers functions
+// SignedArea        -- signed area of a triangle
+// ComputeRingArea   -- signed area of a full ring (shoelace)
+// ComputeDisplacement / ComputeTotalArea -- output metrics
+// Orientation / OnSegment / SegmentsIntersect -- line-segment tests
 
 /************************************************************************/
 /*!
 \brief
-Computes signed area of triangle formed by 3 points
+Computes the SIGNED area of the triangle formed by three points.
+
+The sign is orientation:
++  counterclockwise (CCW)
+-  clockwise (CW)
+0  collinear (degenerate)
+
+Formula used:
+SignedArea = 0.5 * ((B-A) x (C-A))
+where "x" is the 2-D cross product  (B-A).x*(C-A).y - (B-A).y*(C-A).x
 
 \param a
-First point
+First  vertex of the triangle
 
 \param b
-Second point
+Second vertex of the triangle
 
 \param c
-Third point
+Third  vertex of the triangle
 
 \return
-Signed area of triangle
+Double variable of signed area
+(positive = CCW, negative = CW)
 */
 /************************************************************************/
 double SignedArea(const Vec2& a, const Vec2& b, const Vec2& c);
 
-
 /************************************************************************/
 /*!
 \brief
-Computes full polygon area of a ring
+Computes the signed area of a full ring using the shoelace formula.
 
-\param ring
-ring to compute
+The shoelace formula sums cross products of consecutive vertex pairs:
+2 * Area = sum_i (x_i * y_{i+1} - x_{i+1} * y_i)
 
-\return
-signed polygon area
+For counterclockwise ring the result is positive
+For a clockwise ring (hole) it is negative.
+Sign convention is what makes the total signed area meaningful when summed across exterior + holes.
+
+\param ring  The ring to measure.
+\return Signed polygon area.
 */
 /************************************************************************/
 double ComputeRingArea(const Ring& ring);
@@ -81,13 +115,14 @@ double ComputeRingArea(const Ring& ring);
 /************************************************************************/
 /*!
 \brief
-Computes approximate areal displacement
+Computes the total areal displacement across all rings
+Displacement, sum over rings of current_area - original_area
 
-\param rings
-All rings
+Because the APSC formula preserves area exactly per collapse, this should remain at ~1e-10
 
-\return
-Displacement 
+\param rings  All rings after simplification.
+
+\return Total unsigned areal displacement.
 */
 /************************************************************************/
 double ComputeDisplacement(const std::vector<Ring>& rings);
@@ -95,38 +130,40 @@ double ComputeDisplacement(const std::vector<Ring>& rings);
 /************************************************************************/
 /*!
 \brief
-Computes total signed area
+Computes the algebraic sum of signed areas across all rings.
+
+For a polygon with holes the exterior ring contributes positive area
+and each hole contributes negative area, so the total equals the
+"filled area" of the polygon.
 
 \param rings
-All rings
+All rings in vector to check
 
-\return
-Total area
+\return Total signed area.
 */
 /************************************************************************/
 double ComputeTotalArea(const std::vector<Ring>& rings);
 
-
-//Helper funcs
-
 /************************************************************************/
 /*!
 \brief
-Computes orientation of ordered triplet (a,b,c)
+Orientation test for an ordered triplet of points (a, b, c).
+
+Uses the sign of the cross product (b-a) x (c-b).
 
 \param a
-First point
+First  point
 
 \param b
 Second point
 
 \param c
-Third point
+Third  point
 
-\return
-0=collinear
-1=clockwise
-2=counterclockwise
+\return  
+0, collinear
+1, clockwise
+2, counter-clockwise
 */
 /************************************************************************/
 int Orientation(const Vec2& a, const Vec2& b, const Vec2& c);
@@ -134,19 +171,22 @@ int Orientation(const Vec2& a, const Vec2& b, const Vec2& c);
 /************************************************************************/
 /*!
 \brief
-Checks if point c lies on segment ab
+Checks whether point c lies on the closed line segment [a, b].
 
-\param a
+Used as a special case inside SegmentsIntersect when three points
+are collinear.
+
+\param a  
 Segment start
 
-\param b
+\param b  
 Segment end
 
-\param c
-Point
+\param c  
+Point to test
 
-\return
-True if on segment
+\return 
+true if c is on [a, b]
 */
 /************************************************************************/
 bool OnSegment(const Vec2& a, const Vec2& b, const Vec2& c);
@@ -154,16 +194,24 @@ bool OnSegment(const Vec2& a, const Vec2& b, const Vec2& c);
 /************************************************************************/
 /*!
 \brief
-Checks if two line segments intersect
+Tests whether two line segments (p1,q1) and (p2,q2) intersect.
 
-\param p1,q1
-First segment
+Uses the standard orientation-based algorithm:
+1. General case: orientations of the four triplets differ.
+2. Special cases: collinear overlap (one endpoint lies on the other segment).
 
-\param p2,q2
-Second segment
+This test is the core of the topology-validity check: after a
+proposed collapse we check whether any new edge A->E or E->D
+intersects any existing edge of any ring.
 
-\return
-True if intersect
+\param p1, q1  
+First  segment (endpoints)
+
+\param p2, q2  
+Second segment (endpoints)
+
+\return 
+true if the segments intersect
 */
 /************************************************************************/
 bool SegmentsIntersect(const Vec2& p1, const Vec2& q1, const Vec2& p2, const Vec2& q2);

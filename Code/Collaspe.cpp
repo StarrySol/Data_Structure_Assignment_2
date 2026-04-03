@@ -1,126 +1,115 @@
+/******************************************************************************
+ * File:        Collaspe.cpp
+ * Project:     Data Structures Assigment 2
+ *
+ * Description:
+ * This file contains the definition of functions to apply Area-Preserving Segment Collapse (APSC)
+ * to a polygon ring to try to reduce the number of polygons while preserving the area
+ * 
+ * For example, it tries to replace the path A->B->C->D with the shorter path
+ * A->E->D, with 1 point (E) instead of the orginal 2 (B & C) in a way
+ * that preserve the orignal area. Point E can be anywhere that matches the are
+ * but it tries to limnit the area swept between the old and new path (areal displacement)
+ * 
+
+ ******************************************************************************/
+
 #include "Collaspe.h"
 
 #include <iostream>
-
 #include <queue>
+#include <cmath>
+#include <limits>
 
-//Compute collapse cost (area error)
 double ComputeCost(Node* node)
 {
-    Node* prev = node->prev;
-    Node* next = node->next;
+    //node is B in the 4-node window A -> B -> C -> D
+    Node* A = node->prev;
+    Node* C = node->next;
+    Node* D = C->next;
 
-    const Vec2& A = prev->v.pos;
-    const Vec2& B = node->v.pos;
-    const Vec2& C = next->v.pos;
-
-    //Triangle area (importance of removing this vertex)
-    double area = std::abs(SignedArea(A, B, C));
-
-    //Edge lengths
-    double len1 = std::hypot(B.x - A.x, B.y - A.y);
-    double len2 = std::hypot(C.x - B.x, C.y - B.y);
-
-    //Prevent division by zero
-    if (len1 < 1e-9 || len2 < 1e-9)
+    //Sanity check: the ring must have at least 4 distinct nodes
+    if (A == C || A == D || node == D)
         return std::numeric_limits<double>::max();
 
-    //Angle penalty (preserve sharp corners)
-    double dot = (B.x - A.x)*(C.x - B.x) + (B.y - A.y)*(C.y - B.y);
-    double anglePenalty = std::abs(dot) / (len1 * len2);
+    const Vec2& a = A->v.pos;
+    const Vec2& b = node->v.pos;
+    const Vec2& c = C->v.pos;
+    const Vec2& d = D->v.pos;
 
-    //Final weighted cost
-    return area * (1.0 + anglePenalty);
+    //Cost = sum of absolute areas of the two triangles being replaced.
+    //A collapse that flattens a tall spike costs more than one that
+    //removes a barely-visible bump.
+    double cost = std::abs(SignedArea(a, b, c))+ std::abs(SignedArea(a, c, d));
+
+    return cost;
 }
 
-void Collapse(Ring& ring, Node* node)
+
+bool IsCollapseValid(const std::vector<Ring>& rings, Node* A, Node* B, Node* C, Node* D)
 {
-    Node* prev = node->prev;
-    Node* next = node->next;
+    //Compute where E will be placed
+    Vec2 E = ComputeNewPoint(A, B, C, D);
 
-    //Compute new position
-    Vec2 newPos = ComputeNewPoint(prev, node, next);
+    //The two new edges introduced by the collapse
+    Vec2 e1a = A->v.pos;  //edge 1: A -> E
+    Vec2 e1b = E;
+    Vec2 e2a = E; //edge 2: E -> D
+    Vec2 e2b = D->v.pos;
 
-    //Assign new position to next node
-    next->v.pos = newPos;
-
-    //If removing head, move it forward
-    if (node == ring.head)
-    {
-        ring.head = next;
-    }
-
-    //Reconnect list
-    prev->next = next;
-    next->prev = prev;
-
-    //Mark node invalid
-    node->valid = false;
-}
-
-bool IsCollapseValid(const std::vector<Ring>& rings, Node* node)
-{
-    Node* prev = node->prev;
-    Node* next = node->next;
-
-    Vec2 newPos = ComputeNewPoint(prev, node, next);
-
-    Vec2 e1a = prev->v.pos;
-    Vec2 e1b = newPos;
-
-    Vec2 e2a = newPos;
-    Vec2 e2b = next->v.pos;
-
+    //Test against every edge of every ring
     for (const Ring& ring : rings)
     {
-        if (!ring.head)
-            continue;
+        if (!ring.head) continue;
 
         const Node* curr = ring.head;
 
         do
         {
-            const Node* a = curr;
-            const Node* b = curr->next;
+            const Node* edgeA = curr;
+            const Node* edgeB = curr->next;
 
-            //Skip adjacent edges
-            if (a == node || b == node ||
-                a == prev || b == prev ||
-                a == next || b == next)
+            //Skip edges that touch A, B, C, or D -- they are
+            //part of the collapsing neighbourhood and will be
+            //relinked; intersections here are not real violations.
+            bool adjacent = (edgeA == A || edgeB == A ||
+                             edgeA == B || edgeB == B ||
+                             edgeA == C || edgeB == C ||
+                             edgeA == D || edgeB == D);
+
+            if (!adjacent)
             {
-                curr = curr->next;
-                continue;
-            }
+                const Vec2& ea = edgeA->v.pos;
+                const Vec2& eb = edgeB->v.pos;
 
-            if (SegmentsIntersect(e1a, e1b, a->v.pos, b->v.pos) ||
-                SegmentsIntersect(e2a, e2b, a->v.pos, b->v.pos))
-                return false;
+                if (SegmentsIntersect(e1a, e1b, ea, eb) || SegmentsIntersect(e2a, e2b, ea, eb))
+                    return false;   //topology would be violated
+            }
 
             curr = curr->next;
 
         } while (curr != ring.head);
     }
 
-    return true;
+    return true;  //no intersections found -- safe to collapse
 }
+
+
 void SimplifyAll(std::vector<Ring>& rings, int target)
 {
-    using MinHeap = std::priority_queue<
-        CollapseCandidate,
-        std::vector<CollapseCandidate>,
-        std::greater<CollapseCandidate>
-    >;
-
-    MinHeap pq;
-
+    MinHeap pq; //global min-heap of collapse candidates
     int totalVertices = 0;
-    int globalID = 0;
+    int globalID = 0; //monotone counter for stable tie-breaking
 
-    //Initialize PQ
+    
+    //--Seed the heap with one candidate per node--
+    
+    //Each node is treated as "B" in the 4-node window A->B->C->D.
+    //We compute its initial cost and push a CollapseCandidate.
+    
     for (Ring& ring : rings)
     {
-        if (!ring.head)
-            continue;
+        if (!ring.head) continue;
 
         totalVertices += ring.size;
 
@@ -130,19 +119,21 @@ void SimplifyAll(std::vector<Ring>& rings, int target)
         {
             curr->cost = ComputeCost(curr);
 
-            pq.push({
+            pq.push(CollapseCandidate(
                 curr,
                 curr->cost,
                 globalID++,
-                curr->version
-            });
+                curr->version  //version = 0 at this point
+            ));
 
             curr = curr->next;
 
         } while (curr != ring.head);
     }
 
-    //Main loop
+    //Greedy collapse loop
+    //Pop the cheapest candidate, validate it, apply it, and push updated candidates for the affected neighbours
+    
     while (totalVertices > target && !pq.empty())
     {
         CollapseCandidate top = pq.top();
@@ -150,21 +141,26 @@ void SimplifyAll(std::vector<Ring>& rings, int target)
 
         Node* node = top.node;
 
-        //Skip invalid nodes
-        if (!node || !node->valid)
-            continue;
+        //Skip if the node was already removed by a previous collapse.
+        if (!node || !node->valid) continue;
 
-        //Skip outdated PQ entries
-        if (top.version != node->version)
-            continue;
+        //Skip stale entries: the node's cost was updated after
+        //this entry was pushed, so a fresher entry is already in
+        //the heap (or was already processed).
+        if (top.version != node->version) continue;
 
-        //Find owning ring
+        
+        //Find the ring that owns this node.
+        //
+        //We walk every ring's circular list looking for a pointer
+        //match.  This is O(total_vertices) in the worst case but
+        //avoids storing a back-pointer from Node to Ring.
+        
         Ring* ownerRing = nullptr;
 
         for (Ring& r : rings)
         {
-            if (!r.head)
-                continue;
+            if (!r.head) continue;
 
             Node* curr = r.head;
 
@@ -176,108 +172,148 @@ void SimplifyAll(std::vector<Ring>& rings, int target)
                     break;
                 }
                 curr = curr->next;
-
             } while (curr != r.head);
 
-            if (ownerRing)
-                break;
+            if (ownerRing) break;
         }
 
-        if (!ownerRing || ownerRing->size <= 3)
-            continue;
+        //Can't collapse if the ring is too small or not found.
+        if (!ownerRing || ownerRing->size <= 3) continue;
 
-        Node* prev = node->prev;
-        Node* next = node->next;
+        //Capture the neighbours BEFORE the collapse changes pointers.
+        //A = prev of B (stays)
+        //C = next of B (will become E)
+        //D = next of C (stays)
+        Node* A = node->prev;
+        Node* C = node->next;
+        Node* D = (C != nullptr) ? C->next : nullptr;
 
-        if (!TryCollapse(rings, *ownerRing, node))
-            continue;
+        //Attempt the collapse.  If it fails (topology check, stability
+        //check, or ring too small) we simply skip this candidate.
+        if (!TryCollapse(rings, *ownerRing, node)) continue;
 
         totalVertices--;
 
-        //Update neighbors
-        if (prev && prev->valid)
-        {
-            prev->version++; //invalidate old PQ entries
-            prev->cost = ComputeCost(prev);
-            pq.push(CollapseCandidate(prev, prev->cost, globalID++, prev->version));
-        }
         
-        if (next && next->valid)
+        //Push updated candidates for the three nodes whose 4-node
+        //windows changed:
+        //
+        //  A  : now its window is (A->prev) -> A -> E -> D
+        //  C/E: now its window is A -> E -> D -> (D->next)
+        //  D  : now its window is E -> D -> (D->next) -> ...
+        //
+        //We increment each node's version to invalidate the old heap entries for them
+        
+        if (A && A->valid)
         {
-            next->version++; //invalidate old PQ entries
-            next->cost = ComputeCost(next);
-            pq.push(CollapseCandidate(next, next->cost, globalID++, next->version));
+            A->version++;
+            A->cost = ComputeCost(A);
+            pq.push(CollapseCandidate(A, A->cost, globalID++, A->version));
+        }
+
+        if (C && C->valid)   //C is now E
+        {
+            C->version++;
+            C->cost = ComputeCost(C);
+            pq.push(CollapseCandidate(C, C->cost, globalID++, C->version));
+        }
+
+        if (D && D->valid && D != A && D != C)
+        {
+            D->version++;
+            D->cost = ComputeCost(D);
+            pq.push(CollapseCandidate(D, D->cost, globalID++, D->version));
         }
     }
 }
-Vec2 ComputeNewPoint(Node* prev, Node* curr, Node* next)
+
+
+Vec2 ComputeNewPoint(Node* A, Node* B, Node* C, Node* D)
 {
-    const Vec2& A = prev->v.pos;
-    const Vec2& B = curr->v.pos;
-    const Vec2& C = next->v.pos;
+    const Vec2& a = A->v.pos;
+    const Vec2& b = B->v.pos;
+    const Vec2& c = C->v.pos;
+    const Vec2& d = D->v.pos;
 
-    //Compute twice signed area of triangle ABC
-    double area2 = (B.x - A.x)*(C.y - A.y) - (B.y - A.y)*(C.x - A.x);
+    //cross(p,q) = p.x*q.y - q.x*p.y   (one shoelace term)
+    auto cross2 = [](const Vec2& p, const Vec2& q) -> double {
+        return p.x * q.y - q.x * p.y;
+    };
 
-    //Midpoint of AC
-    Vec2 mid((A.x + C.x)*0.5, (A.y + C.y)*0.5);
+    //RHS: total shoelace contribution of the three OLD edges
+    double rhs = cross2(a, b) + cross2(b, c) + cross2(c, d);
 
-    //Direction AC
-    Vec2 d = C - A;
-    double len = std::sqrt(d.x*d.x + d.y*d.y);
+    //Midpoint and direction of segment A -> D
+    Vec2 mid((a.x + d.x) * 0.5, (a.y + d.y) * 0.5);
+    Vec2 ad = d - a;
+    double len = std::sqrt(ad.x * ad.x + ad.y * ad.y);
 
     if (len < 1e-9)
-        return B;//degenerate case
+        return c;   //degenerate: A and D are the same point; keep C's position
 
-    //Perpendicular unit normal
-    Vec2 n(-d.y / len, d.x / len);
+    //Unit normal to A->D (rotated 90 CCW)
+    Vec2 n_hat(-ad.y / len, ad.x / len);
 
-    //Height needed to preserve area
-    double h = area2 / len;
+    //Evaluate the constraint equation at E = mid (t = 0):
+    //  (A.x - D.x)*mid.y + (D.y - A.y)*mid.x  = lhs_const
+    double lhs_const = mid.y * (a.x - d.x) + mid.x * (d.y - a.y);
 
-    //Final point
-    return Vec2(mid.x + n.x * h, mid.y + n.y * h);
+    //Derivative of the constraint equation along n_hat:
+    //  (A.x - D.x)*n_hat.y + (D.y - A.y)*n_hat.x
+    //It can be shown algebraically that this equals -|AD| = -len.
+    double t = (rhs - lhs_const) / (-len);
+
+    //Final point: the area-preserving, displacement-minimising E
+    return Vec2(mid.x + n_hat.x * t, mid.y + n_hat.y * t);
 }
+
 
 bool TryCollapse(std::vector<Ring>& rings, Ring& ring, Node* node)
 {
-    if (!node || !node->valid)
-        return false;
+    //node is B in A -> B -> C -> D
 
-    if (ring.size <= 3)
-        return false;
+    //Guard: node must be live and the ring must have room to shrink.
+    if (!node || !node->valid) return false;
+    if (ring.size <= 3)        return false;
 
-    Node* prev = node->prev;
-    Node* next = node->next;
+    Node* A = node->prev; //will remain, A->next will point to E after collapse
+    Node* B = node; //will be unlinked
+    Node* C = node->next; //will be repositioned to E
+    Node* D = C->next; //will remain, D->prev will point to E after collapse
 
-    //Check topology
-    if (!IsCollapseValid(rings, node))
-        return false;
+    //Degenerate ring guard: all four pointers must be distinct.
+    if (A == C || B == D || A == D) return false;
 
-    //Compute new position
-    Vec2 newPos = ComputeNewPoint(prev, node, next);
+    //Topology check: ensure the new edges A->E and E->D don't
+    //intersect any existing edge of any ring.
+    if (!IsCollapseValid(rings, A, B, C, D)) return false;
 
-    //Reject unstable movement
-    double moveDist = std::hypot(
-        newPos.x - node->v.pos.x,
-        newPos.y - node->v.pos.y
-    );
+    //Compute the new vertex position E.
+    Vec2 E = ComputeNewPoint(A, B, C, D);
 
-    if (moveDist > 500.0) //tunable threshold
-        return false;
+    //Stability guard: if E is very far from C, the geometry is
+    //degenerate (nearly-parallel edges with a tiny shared area).
+    //Reject such collapses to prevent flying-away vertices.
+    double moveDist = std::hypot(E.x - C->v.pos.x,E.y - C->v.pos.y);
+    if (moveDist > 500.0) 
+        return false;   //threshold is tunable
 
-    //Apply new position
-    next->v.pos = newPos;
+    //----Apply the collapse----
 
-    //Update head
-    if (node == ring.head)
-        ring.head = next;
+    //Move C to E (C's node stays in the list; only its position changes).
+    C->v.pos = E;
 
-    //Reconnect list
-    prev->next = next;
-    next->prev = prev;
+    //If B was the ring's entry point, advance head to C (= E).
+    if (B == ring.head)
+        ring.head = C;
 
-    node->valid = false;
+    //Unlink B from the doubly-linked list:
+    //  A <-> B <-> C   becomes   A <-> C
+    A->next = C;
+    C->prev = A;
+
+    //Mark B as removed so the heap skips any stale entries for it.
+    B->valid = false;
 
     ring.size--;
 
