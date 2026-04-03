@@ -10,10 +10,23 @@ struct CollapseCandidate
 {
     Node* node;
     double cost;
+    int id;
+    int version;
+
+    //Constructor (REQUIRED for pq.push)
+    CollapseCandidate(Node* n, double c, int i, int v)
+        : node(n), cost(c), id(i), version(v)
+    {}
 
     bool operator>(const CollapseCandidate& other) const
     {
-        return cost > other.cost;
+        if (std::abs(cost - other.cost) > 1e-9)
+            return cost > other.cost;
+
+        if (node->v.vertex_id != other.node->v.vertex_id)
+            return node->v.vertex_id > other.node->v.vertex_id;
+
+        return id > other.id;
     }
 };
 
@@ -108,7 +121,7 @@ void SimplifyAll(std::vector<Ring>& rings, int target);
 /************************************************************************/
 /*!
 \brief
-Computes area-preserving new point for collapse
+Computes new vertex position using true APSC (area-preserving polyline collapse)
 
 \param prev
 Previous node

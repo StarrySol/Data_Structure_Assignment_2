@@ -22,6 +22,8 @@ struct Node
     double cost = 0.0;//APSC cost
 
     bool valid = true;//deletion for PQ
+
+    int version = 0; //increment whenever node changes
 };
 
 struct Ring

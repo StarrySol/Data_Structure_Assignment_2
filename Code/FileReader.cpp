@@ -132,8 +132,9 @@ void OutputRings(std::vector<Ring>& ringVec)
 
         do
         {
-            //May not be sequential anymore just ++ incstead
-            std::cout << curr->v.ring_id << "," << ++vid  << ","  << curr->v.pos.x << "," << curr->v.pos.y << std::endl;
+            std::cout << ring.ringID << "," << vid++ << ","
+                      << curr->v.pos.x << "," << curr->v.pos.y << std::endl;
+
             curr = curr->next;
         } while (curr != ring.head);
     }
@@ -146,10 +147,9 @@ void OutputRings(std::vector<Ring>& ringVec)
     double displacement = ComputeDisplacement(ringVec);
 
     std::cout << std::scientific;
-
-    std::cout << "Total signed area in input: "  << inputArea << "\n";
-    std::cout << "Total signed area in output: " << outputArea << "\n";
-    std::cout << "Total areal displacement: "    << displacement << "\n";
+    std::cout << "Total signed area in input: "  << inputArea << std::endl;
+    std::cout << "Total signed area in output: " << outputArea << std::endl;
+    std::cout << "Total areal displacement: "    << displacement << std::endl;
 }
 
 
