@@ -274,6 +274,30 @@ double SignedDistancePointToLine(Vec2 const& a, Vec2 const& b, Vec2 const& p)
     return cross(a, b, p) / len;
 }
 
+bool LineIntersectionParam(Vec2 const& p1, Vec2 const& p2,
+                           Vec2 const& q1, Vec2 const& q2,
+                           double& t, double& u)
+{
+    Vec2 r = p2 - p1;
+    Vec2 s = q2 - q1;
+
+    double denom = cross(r, s);
+
+    if (NearlyEqual(denom, 0.0))
+    {
+        t = 0.0;
+        u = 0.0;
+        return false; // parallel or coincident
+    }
+
+    Vec2 qp = q1 - p1;
+
+    t = cross(qp, s) / denom;
+    u = cross(qp, r) / denom;
+
+    return true;
+}
+
 //wrapper
 double VecLength(const Vec2& lhs, const Vec2& rhs)
 {

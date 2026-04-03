@@ -128,3 +128,15 @@ double Polygon::TotalSignedArea() const
 
     return total;
 }
+
+std::size_t Polygon::VertexCount() const
+{
+    std::size_t total = 0;
+
+    for (Ring const& ring : rings)
+    {
+        total += ring.VertexCount();
+    }
+
+    return total;
+}

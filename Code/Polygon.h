@@ -41,6 +41,7 @@ public:
     double TotalSignedArea() const;
     std::size_t RingCount() const;
     bool IsEmpty() const;
+    std::size_t VertexCount() const;
 
 private:
     std::vector<Ring> rings;

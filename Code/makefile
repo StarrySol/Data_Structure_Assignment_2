@@ -1,5 +1,5 @@
 CXX = g++
-CXXFLAGS = -std=c++17 -pedantic-errors -Wall -Wextra -Werror
+CXXFLAGS = -std=c++20 -pedantic-errors -Wall -Wextra -Werror
 
 TARGET = simplify
 

@@ -83,5 +83,9 @@ int SideOfDirectedLine(Vec2 const& a, Vec2 const& b, Vec2 const& p);
 
 double SignedDistancePointToLine(Vec2 const& a, Vec2 const& b, Vec2 const& p);
 
+bool LineIntersectionParam(Vec2 const& p1, Vec2 const& p2,
+                           Vec2 const& q1, Vec2 const& q2,
+                           double& t, double& u);
+
 std::ostream &operator<<(std::ostream &os, Vec2 const &vec);
 
