@@ -106,3 +106,25 @@ bool Polygon::IsEmpty() const
 {
     return rings.empty();
 }
+
+Vec2 const& Ring::GetVertex(std::size_t index) const
+{
+    return vertices[index];
+}
+
+Ring const& Polygon::GetRing(std::size_t index) const
+{
+    return rings[index];
+}
+
+double Polygon::TotalSignedArea() const
+{
+    double total = 0.0;
+
+    for (Ring const& ring : rings)
+    {
+        total += ring.SignedArea();
+    }
+
+    return total;
+}

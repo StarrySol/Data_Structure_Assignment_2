@@ -38,6 +38,11 @@ std::vector<CSVRow> CSVReader::ReadRows(const std::string& filename)
     {
         ++lineNumber;
 
+        if (!line.empty() && line.back() == '\r')
+        {
+            line.pop_back();
+        }
+
         // Skip empty lines
         if (line.empty())
             continue;

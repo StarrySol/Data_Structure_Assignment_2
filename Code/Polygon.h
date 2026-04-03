@@ -14,7 +14,7 @@ public:
     void SetRingID(unsigned int id);
 
     void AddVertex(Vec2 const& v);
-
+    Vec2 const& GetVertex(std::size_t index) const;
     std::vector<Vec2> const& GetVertices() const;
     //std::vector<Vec2>& GetVertices();
 
@@ -34,11 +34,11 @@ private:
 class Polygon
 {
 public:
-    void AddRing(const Ring& ring);
-
+    void AddRing( Ring const& ring);
+    Ring const& GetRing(std::size_t index) const;
     std::vector<Ring> const& GetRings() const;
     //std::vector<Ring>& GetRings();
-
+    double TotalSignedArea() const;
     std::size_t RingCount() const;
     bool IsEmpty() const;
 

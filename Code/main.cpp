@@ -1,45 +1,27 @@
-#include <iostream>
-#include <iomanip>
 #include <exception>
+#include <iostream>
+#include <string>
+
 #include "CSVReader.h"
-#include "Polygon.h"
+#include "Simplifier.h"
 
 int main(int argc, char* argv[])
 {
-    if (argc < 2)
+    if (argc < 3)
     {
-        std::cerr << "Usage: " << argv[0] << " <input.csv>\n";
+        std::cerr << "Usage: " << argv[0] << " <input.csv> <target_vertices>\n";
         return 1;
     }
 
     try
     {
-        Polygon polygon = CSVReader::ReadPolygon(argv[1]);
+        std::string inputFile = argv[1];
+        std::size_t targetVertices = static_cast<std::size_t>(std::stoull(argv[2]));
 
-        std::cout << "Polygon loaded successfully.\n";
-        std::cout << "Ring count: " << polygon.RingCount() << "\n\n";
+        Polygon polygon = CSVReader::ReadPolygon(inputFile);
+        SimplifyResult result = Simplifier::SimplifyPolygon(polygon, targetVertices);
 
-        for (std::size_t i = 0; i < polygon.RingCount(); ++i)
-        {
-            Ring const& ring = polygon.GetRings()[i];
-
-            std::cout << "Ring " << i << "\n";
-            std::cout << "  ring_id      : " << ring.GetRingID() << "\n";
-            std::cout << "  vertex count : " << ring.VertexCount() << "\n";
-            std::cout << "  is empty     : " << (ring.IsEmpty() ? "true" : "false") << "\n";
-            std::cout << "  is closed    : " << (ring.IsClosed() ? "true" : "false") << "\n";
-            std::cout << "  signed area  : " << ring.SignedArea() << "\n";
-            std::cout << "  area         : " << ring.Area() << "\n";
-            std::cout << "  clockwise    : " << (ring.IsClockwise() ? "true" : "false") << "\n";
-
-            std::cout << "  vertices:\n";
-            for (Vec2 const& v : ring.GetVertices())
-            {
-                std::cout << "    (" << v.x << ", " << v.y << ")\n";
-            }
-
-            std::cout << "\n";
-        }
+        Simplifier::WriteOutput(std::cout, result);
     }
     catch (std::exception const& ex)
     {

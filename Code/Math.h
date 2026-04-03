@@ -73,5 +73,15 @@ bool NearlyEqual(Vec2 const& a, Vec2 const& b, double eps = 1e-9);
 double PointLineSide(Vec2 const& a, Vec2 const& b, Vec2 const& p);
 double DistancePointToLine(Vec2 const& a, Vec2 const& b, Vec2 const& p);                       
 
+//
+Vec2 LineIntersection(Vec2 const& p1, Vec2 const& p2,
+                      Vec2 const& q1, Vec2 const& q2);
+
+double TriangleArea(Vec2 const& a, Vec2 const& b, Vec2 const& c);
+
+int SideOfDirectedLine(Vec2 const& a, Vec2 const& b, Vec2 const& p);
+
+double SignedDistancePointToLine(Vec2 const& a, Vec2 const& b, Vec2 const& p);
+
 std::ostream &operator<<(std::ostream &os, Vec2 const &vec);
 

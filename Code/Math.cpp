@@ -227,6 +227,53 @@ std::ostream &operator<<(std::ostream &os, Vec2 const &vec)
     return os << "Vec2(" << vec.x << ", " << vec.y << ")";
 }
 
+//
+Vec2 LineIntersection(Vec2 const& p1, Vec2 const& p2,
+                      Vec2 const& q1, Vec2 const& q2)
+{
+    Vec2 r = p2 - p1;
+    Vec2 s = q2 - q1;
+
+    double denom = cross(r, s);
+
+    if (NearlyEqual(denom, 0.0))
+    {
+        return p1; // fallback for parallel/nearly parallel lines
+    }
+
+    double t = cross(q1 - p1, s) / denom;
+    return p1 + t * r;
+}
+
+double TriangleArea(Vec2 const& a, Vec2 const& b, Vec2 const& c)
+{
+    return std::abs(SignedTriangleArea(a, b, c));
+}
+
+int SideOfDirectedLine(Vec2 const& a, Vec2 const& b, Vec2 const& p)
+{
+    double side = PointLineSide(a, b, p);
+
+    if (NearlyEqual(side, 0.0))
+    {
+        return 0;
+    }
+
+    return (side > 0.0) ? 1 : -1;
+}
+
+double SignedDistancePointToLine(Vec2 const& a, Vec2 const& b, Vec2 const& p)
+{
+    double len = distance(a, b);
+
+    if (NearlyEqual(len, 0.0))
+    {
+        return distance(a, p);
+    }
+
+    return cross(a, b, p) / len;
+}
+
 //wrapper
 double VecLength(const Vec2& lhs, const Vec2& rhs)
 {

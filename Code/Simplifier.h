@@ -1,47 +1,48 @@
 
 #pragma once
-#include <vector>
-#include <cstddef> //size_t
-#include "Math.h"
+#include <cstddef>
+#include <iosfwd>
+#include "Polygon.h"
 
-class Ring
+struct SimplifyResult
 {
-public:
-    Ring() = default;
-    explicit Ring(unsigned int id);
-
-    unsigned int GetRingID() const;
-    void SetRingID(unsigned int id);
-
-    void AddVertex(Vec2 const& v);
-
-    std::vector<Vec2> const& GetVertices() const;
-    //std::vector<Vec2>& GetVertices();
-
-    std::size_t VertexCount() const;
-    bool IsEmpty() const;
-
-    bool IsClosed() const;
-    double SignedArea() const;
-    double Area() const;
-    bool IsClockwise() const;
-
-private:
-    unsigned int ring_id{};
-    std::vector<Vec2> vertices;
+    Polygon polygon;
+    double inputSignedArea{};
+    double outputSignedArea{};
+    double areaDisplacement{};
 };
 
-class Polygon
+class Simplifier
 {
 public:
-    void AddRing(const Ring& ring);
+    static SimplifyResult SimplifyPolygon(Polygon const& polygon,
+                                          std::size_t targetTotalVertices);
 
-    std::vector<Ring> const& GetRings() const;
-    //std::vector<Ring>& GetRings();
-
-    std::size_t RingCount() const;
-    bool IsEmpty() const;
+    static void WriteOutput(std::ostream& os, SimplifyResult const& result);
 
 private:
-    std::vector<Ring> rings;
+    static Ring SimplifyRing(Ring const& ring,
+                             std::size_t targetVertices,
+                             double& accumulatedArealDisplacement);
+
+    static Vec2 ComputeCollapsePoint(Vec2 const& A,
+                                     Vec2 const& B,
+                                     Vec2 const& C,
+                                     Vec2 const& D);
+
+    static double ComputeCollapseDisplacement(Vec2 const& A,
+                                             Vec2 const& B,
+                                             Vec2 const& C,
+                                             Vec2 const& D,
+                                             Vec2 const& E);
+
+    static bool IsCollapseValid(Ring const& ring,
+                                std::size_t i,
+                                Vec2 const& E);
+
+    static bool SegmentIntersectsRing(Vec2 const& p1,
+                                      Vec2 const& q1,
+                                      Ring const& ring,
+                                      std::size_t skipEdgeStart1,
+                                      std::size_t skipEdgeStart2);
 };
