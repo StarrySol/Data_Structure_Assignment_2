@@ -1,19 +1,11 @@
 
+/*================================================ */
+/********************Math.h******************** */
+/*================================================*/
 /*
 Contains pure math/Geometry helpers 
-    Vec2
-    cross product
-    orientation
-    signed triangle area
-    signed ring area
-    segment intersection
-    point-line side test
-    distance from point to line
-    line-line intersection
-    shoelace area
 */
 #pragma once
-#include <cmath>
 #include <iosfwd>
 
 
@@ -64,6 +56,22 @@ Vec2 operator-(Vec2 const&v0, Vec2 const&v1);
 Vec2 operator*(Vec2 const&v, double s); // vector * scalar
 Vec2 operator*(double s, Vec2 const&v); // scalar * vector
 Vec2 operator/(Vec2 const&v, double s); // vector / scalar
+
+/*
+extra math for polygon
+*/
+//cross overloaded 
+double cross(Vec2 const& a, Vec2 const& b, Vec2 const& c);
+double SignedTriangleArea(Vec2 const& a, Vec2 const& b, Vec2 const& c);
+int Orientation(Vec2 const& a, Vec2 const& b, Vec2 const& c);
+bool OnSegment(Vec2 const& a, Vec2 const& b, Vec2 const& p);
+bool SegmentsIntersect(Vec2 const& p1, Vec2 const& q1,
+                       Vec2 const& p2, Vec2 const& q2);
+
+bool NearlyEqual(double a, double b, double eps = 1e-9);
+bool NearlyEqual(Vec2 const& a, Vec2 const& b, double eps = 1e-9);
+double PointLineSide(Vec2 const& a, Vec2 const& b, Vec2 const& p);
+double DistancePointToLine(Vec2 const& a, Vec2 const& b, Vec2 const& p);                       
 
 std::ostream &operator<<(std::ostream &os, Vec2 const &vec);
 

@@ -1,11 +1,19 @@
+
+/*================================================ */
+/********************Math.cpp******************** */
+/*================================================*/
+/*
+Contains pure math/Geometry helpers 
+*/
 #include "Math.h"
 #include <iomanip>
 #include <iostream>
 #include <cassert>
+#include <algorithm>
 /************************************************* */
 /********************ctor/dtor******************** */
 /************************************************* */
-Vec2::Vec2(double inX = 0, double inY = 0) : x(inX), y(inY) { /*empty by design*/}
+Vec2::Vec2(double inX, double inY) : x(inX), y(inY) { /*empty by design*/}
 
 
 /************************************************* */
@@ -131,21 +139,92 @@ Vec2 operator/(Vec2 const&v, double s)
     return tmp /= s;
 }
 
+//
+bool NearlyEqual(double a, double b, double eps)
+{
+    return std::abs(a - b) <= eps;
+}
+
+bool NearlyEqual(Vec2 const& a, Vec2 const& b, double eps)
+{
+    return NearlyEqual(a.x, b.x, eps) && NearlyEqual(a.y, b.y, eps);
+}
+
+// 2D cross product of AB x AC
+double cross(Vec2 const& a, Vec2 const& b, Vec2 const& c)
+{
+    return (b.x - a.x) * (c.y - a.y) -
+           (b.y - a.y) * (c.x - a.x);
+}
+
+double SignedTriangleArea(Vec2 const& a, Vec2 const& b, Vec2 const& c)
+{
+    return 0.5 * cross(a, b, c);
+}
+
+int Orientation(Vec2 const& a, Vec2 const& b, Vec2 const& c)
+{
+    double val = cross(a, b, c);
+
+    if (NearlyEqual(val, 0.0))
+        return 0; // collinear
+
+    return (val > 0.0) ? 2 : 1; // 2 = counterclockwise, 1 = clockwise
+}
+
+bool OnSegment(Vec2 const& a, Vec2 const& b, Vec2 const& p)
+{
+    if (Orientation(a, b, p) != 0)
+        return false;
+
+    return p.x <= std::max(a.x, b.x) + 1e-9 &&
+           p.x >= std::min(a.x, b.x) - 1e-9 &&
+           p.y <= std::max(a.y, b.y) + 1e-9 &&
+           p.y >= std::min(a.y, b.y) - 1e-9;
+}
+
+bool SegmentsIntersect(Vec2 const& p1, Vec2 const& q1,
+                       Vec2 const& p2, Vec2 const& q2)
+{
+    int o1 = Orientation(p1, q1, p2);
+    int o2 = Orientation(p1, q1, q2);
+    int o3 = Orientation(p2, q2, p1);
+    int o4 = Orientation(p2, q2, q1);
+
+    // General case
+    if (o1 != o2 && o3 != o4)
+        return true;
+
+    // Special collinear cases
+    if (o1 == 0 && OnSegment(p1, q1, p2)) return true;
+    if (o2 == 0 && OnSegment(p1, q1, q2)) return true;
+    if (o3 == 0 && OnSegment(p2, q2, p1)) return true;
+    if (o4 == 0 && OnSegment(p2, q2, q1)) return true;
+
+    return false;
+}
+
+// positive if p is to the left of ab, negative if right, 0 if on line
+double PointLineSide(Vec2 const& a, Vec2 const& b, Vec2 const& p)
+{
+    return cross(a, b, p);
+}
+
+double DistancePointToLine(Vec2 const& a, Vec2 const& b, Vec2 const& p)
+{
+    double len = distance(a, b);
+
+    if (NearlyEqual(len, 0.0))
+        return distance(a, p);
+
+    return std::abs(cross(a, b, p)) / len;
+}
+
 std::ostream &operator<<(std::ostream &os, Vec2 const &vec)
 {
     //os << std::fixed << std::setprecision(3);
     return os << "Vec2(" << vec.x << ", " << vec.y << ")";
 }
-
-
-
-
-
-
-
-
-
-
 
 //wrapper
 double VecLength(const Vec2& lhs, const Vec2& rhs)
