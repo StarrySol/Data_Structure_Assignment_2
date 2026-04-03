@@ -5,28 +5,18 @@ SRCS = $(wildcard *.cpp)
 OBJS = $(SRCS:.cpp=.o)
 DEPS = $(wildcard *.h)
 
-all: $(TARGET)
+TARGET = simplify
 
-%.o: %.cpp $(DEPS)
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+SRCS = main.cpp Code/Ring.cpp Code/FileReader.cpp Code/Collaspe.cpp
+OBJS = $(SRCS:.cpp=.o)
+
+all: clean $(TARGET)
 
 $(TARGET): $(OBJS)
-	$(CXX) $(CXXFLAGS) $(OBJS) -o $(TARGET)
+	$(CXX) $(CXXFLAGS) -o $(TARGET) $(OBJS)
 
-.PHONY: all clean run
-
-# usage:
-# make run FILE=input_rectangle_with_two_holes.csv VERTICES=7
-run: $(TARGET)
-	@if [ -z "$(FILE)" ]; then \
-		echo "Error: Please specify a CSV file with FILE=<input.csv>"; \
-		exit 1; \
-	fi
-	@if [ -z "$(VERTICES)" ]; then \
-		echo "Error: Please specify target vertices with VERTICES=<number>"; \
-		exit 1; \
-	fi
-	./$(TARGET) $(FILE) $(VERTICES)
+%.o: %.cpp
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:
-	rm -f $(TARGET) $(OBJS)
+	rm -f $(OBJS) $(TARGET)
