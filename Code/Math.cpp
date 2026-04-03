@@ -10,6 +10,7 @@ Contains pure math/Geometry helpers
 #include <iostream>
 #include <cassert>
 #include <algorithm>
+#include <cmath>
 /************************************************* */
 /********************ctor/dtor******************** */
 /************************************************* */

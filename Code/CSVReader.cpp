@@ -22,6 +22,11 @@ std::vector<CSVRow> CSVReader::ReadRows(const std::string& filename)
         throw std::runtime_error("CSV file is empty: " + filename);
     }
 
+    if (!line.empty() && line.back() == '\r')
+    {
+        line.pop_back();
+    }
+
     if (line != "ring_id,vertex_id,x,y")
     {
         throw std::runtime_error("Invalid CSV header. Expected: ring_id,vertex_id,x,y");
@@ -77,44 +82,55 @@ std::vector<CSVRow> CSVReader::ReadRows(const std::string& filename)
     return rows;
 }
 
-Polygon CSVReader::BuildPolygon(const std::vector<CSVRow>& rows)
+//build a polygon from data values in a CSV file
+Polygon CSVReader::BuildPolygon(const std::vector<CSVRow>& rows) 
 {
     Polygon polygon{};
 
-    if (rows.empty())
+    if (rows.empty()){
         return polygon;
+    }
+        
 
     // Find largest ring id so we can resize once
     unsigned int maxRingID = 0;
-    for (const CSVRow& row : rows)
+    for ( CSVRow const& row : rows)
     {
-        if (row.ring_id > maxRingID)
+        if (row.ring_id > maxRingID){
             maxRingID = row.ring_id;
+        }            
     }
 
-    polygon.rings.resize(static_cast<std::size_t>(maxRingID) + 1);
+    std::vector<Ring> builtRings;
+    builtRings.reserve(static_cast<std::size_t>(maxRingID) + 1);
 
-    for (std::size_t i = 0; i < polygon.rings.size(); ++i)
+    for (unsigned int i = 0; i <= maxRingID; ++i)
     {
-        polygon.rings[i].ring_id = static_cast<unsigned int>(i);
+        builtRings.emplace_back(i);
     }
+
 
     // Copy rows first so we can sort by ring_id, then vertex_id
     std::vector<CSVRow> sortedRows = rows;
     std::sort(sortedRows.begin(), sortedRows.end(),
         [](const CSVRow& a, const CSVRow& b)
         {
-            if (a.ring_id != b.ring_id)
-                return a.ring_id < b.ring_id;
+            if (a.ring_id != b.ring_id){
+                 return a.ring_id < b.ring_id;
+            }       
             return a.vertex_id < b.vertex_id;
         });
-
-    for (const CSVRow& row : sortedRows)
+    for ( CSVRow const& row : sortedRows)
     {
-        polygon.rings[row.ring_id].vertices.emplace_back(row.x, row.y);
+        builtRings[row.ring_id].AddVertex(Vec2(row.x, row.y));
     }
 
-    return polygon;
+    for ( Ring const& ring  : builtRings)
+    {
+        polygon.AddRing(ring);
+    }
+
+    return polygon; // return final polygon created from CSV data values
 }
 
 Polygon CSVReader::ReadPolygon(const std::string& filename)
