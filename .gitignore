@@ -36,6 +36,10 @@
 *.exe
 *.out
 *.app
+simplify
 
 # debug information files
 *.dwo
+
+# Visual Studio workspace files
+.vs/
