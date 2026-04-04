@@ -293,6 +293,11 @@ Vec2 Simplifier::ComputeCollapsePoint(Vec2 const& A,
         {
             return B;
         }
+
+        if (t < -2.0 || t > 3.0){
+            return B;
+        }
+        
         return A + t * (B - A);
     };
 
@@ -310,6 +315,10 @@ Vec2 Simplifier::ComputeCollapsePoint(Vec2 const& A,
         {
             return C;
         }
+        if (t < -2.0 || t > 3.0){
+            return C;
+        }
+        
         return C + t * (D - C);
     };
 
@@ -317,7 +326,7 @@ Vec2 Simplifier::ComputeCollapsePoint(Vec2 const& A,
     // Then any point between A and D is optimal; paper notes the rule yields A or D.
     if (NearlyEqual(lineValue(A), 0.0) && NearlyEqual(lineValue(D), 0.0))
     {
-        return A;
+        return D;
     }
 
     int sideB = SideOfDirectedLine(A, D, B);
@@ -368,13 +377,23 @@ double Simplifier::ComputeCollapseDisplacement(Vec2 const& A,
     // Areal displacement = total area enclosed by ABCD and AED.
     // Use the closed boundary A -> B -> C -> D -> E -> A.
     //
-    // Crucially, use UNSIGNED area. The old implementation let signed
-    // cancellation drive some collapses to zero incorrectly.
+    // For S-curves, edge D->E crosses B->C, making the pentagon
+    // self-intersecting. The shoelace gives 0 due to sign cancellation.
+    // Detect this and compute the sum of the two lobes instead.
+    double t = 0.0, u = 0.0;
+    if (LineIntersectionParam(E, D, B, C, t, u) &&
+        t > 1e-9 && t < 1.0 - 1e-9 &&
+        u > 1e-9 && u < 1.0 - 1e-9)
+    {
+        // S-curve: find intersection point I, compute lobe area
+        // Both lobes are equal (area preservation), so total = 2 * lobe
+        Vec2 I = E + t * (D - E);
+        double lobe = std::abs(SignedTriangleArea(E, B, I));
+        return 2.0 * lobe;
+    }
 
-    // Use absolute shoelace area of that boundary.
-
+    // C-curve: pentagon doesn't self-intersect
     Vec2 const poly[5] = {A, B, C, D, E};
-
     double twiceArea = 0.0;
     for (int i = 0; i < 5; ++i)
     {
@@ -382,7 +401,6 @@ double Simplifier::ComputeCollapseDisplacement(Vec2 const& A,
         Vec2 const& q = poly[(i + 1) % 5];
         twiceArea += p.x * q.y - q.x * p.y;
     }
-
     return std::abs(0.5 * twiceArea);
 }
 
@@ -674,6 +692,21 @@ SimplifyResult Simplifier::SimplifyPolygon(Polygon const& polygon,
             continue;
         }
 
+        //Guard
+        // Reject if E has flown far from C's original position.
+        // This happens when E↔ is nearly parallel to AB or CD, making
+        // the line intersection extremely sensitive to floating-point error.
+        {
+            double moveDist = distance(cand.E, cand.C->p);
+            double refLen   = distance(cand.A->p, cand.D->p);
+            // Reject if E moved more than 10× the span A→D
+            if (!std::isfinite(cand.E.x) || !std::isfinite(cand.E.y) ||
+                moveDist > 10.0 * refLen + 1.0)
+            {
+                continue;
+            }
+        }
+
         RingState* ringPtr = nullptr;
         for (RingState& ring : rings)
         {
@@ -715,6 +748,8 @@ void Simplifier::WriteOutput(std::ostream& os, SimplifyResult const& result)
         for (std::size_t v = 0; v < ring.VertexCount(); ++v)
         {
             Vec2 const& p = ring.GetVertex(v);
+
+            os << std::setprecision(10) << std::defaultfloat;
             os << r << "," << v << "," << p.x << "," << p.y << "\n";
         }
     }
